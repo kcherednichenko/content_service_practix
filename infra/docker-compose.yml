@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  es:
+    image: elasticsearch:8.6.2
+    volumes:
+      - es_practix_data:/usr/share/elasticsearch/data
+    expose:
+      - "9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    healthcheck:
+      test:     
+        [
+          "CMD-SHELL",
+          "curl -s http://localhost:9200/_cluster/health?pretty | grep status | grep -q '\\(green\\|yellow\\)'"
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7.2.4
+    volumes:
+      - redis_practix_data:/data
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Just loads empty es with initial data and exits
+  es_loader:
+    image: elasticdump/elasticsearch-dump:latest
+    entrypoint: /data/load.sh
+    volumes:
+      - ./es_data:/data
+    depends_on:
+      es:
+        condition: service_healthy
+    env_file:
+      - ../async_api/.env
+
+  async_api:
+    build: ../async_api
+    expose:
+      - "8000"
+    env_file:
+      - ../async_api/.env
+    depends_on:
+      es:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.25
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ../nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+    depends_on:
+      - async_api
+
+volumes:
+  es_practix_data:
+  redis_practix_data:

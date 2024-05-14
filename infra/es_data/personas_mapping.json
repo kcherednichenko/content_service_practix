@@ -1,0 +1,1 @@
+{"personas":{"mappings":{"dynamic":"strict","properties":{"films":{"type":"nested","dynamic":"strict","properties":{"id":{"type":"keyword"},"roles":{"type":"keyword"}}},"full_name":{"type":"text","analyzer":"ru_en"},"id":{"type":"keyword"}}}}}
