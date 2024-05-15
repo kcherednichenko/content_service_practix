@@ -1,5 +1,4 @@
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class TestSettings(BaseSettings):
@@ -10,7 +9,7 @@ class TestSettings(BaseSettings):
     redis_host: str = '127.0.0.1'
     redis_port: int = 6379
     service_host: str = '127.0.0.1'
-    service_port: ints = 8000
+    service_port: int = 8000
 
 
 test_settings = TestSettings()
