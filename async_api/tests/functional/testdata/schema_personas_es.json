@@ -1,0 +1,39 @@
+{
+  "settings": {
+    "refresh_interval": "1s",
+    "analysis": {
+      "analyzer": {
+        "ru_en": {
+          "tokenizer": "standard",
+          "filter": [
+            "lowercase"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "id": {
+        "type": "keyword"
+      },
+      "full_name": {
+        "type": "text",
+        "analyzer": "ru_en"
+      },
+      "films": {
+        "type": "nested",
+        "dynamic": "strict",
+        "properties": {
+          "id": {
+            "type": "keyword"
+          },
+          "roles": {
+            "type": "keyword"
+          }
+        }
+      }
+    }
+  }
+}
