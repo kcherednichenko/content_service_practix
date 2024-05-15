@@ -3,13 +3,14 @@ from pydantic_settings import BaseSettings
 
 
 class TestSettings(BaseSettings):
-    es_host: str = Field('http://127.0.0.1:9200', env='ELASTIC_HOST')
-    es_index: str = ...
-    es_id_field: str = ...
-    es_index_mapping: dict = ...
+    model_config = SettingsConfigDict(env_file='.env')
 
-    redis_host: str = ...
-    service_url: str = ...
+    elastic_host: str = '127.0.0.1'
+    elastic_port: int = 9200
+    redis_host: str = '127.0.0.1'
+    redis_port: int = 6379
+    service_host: str = '127.0.0.1'
+    service_port: ints = 8000
 
 
 test_settings = TestSettings()
