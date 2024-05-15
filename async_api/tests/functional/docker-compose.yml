@@ -43,7 +43,7 @@ services:
     expose:
       - "8000"
     env_file:
-      - ./.env
+      - ../../.env
     depends_on:
       es:
         condition: service_healthy
