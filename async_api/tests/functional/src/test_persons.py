@@ -26,3 +26,10 @@ async def test_get_existing_person_by_id(es_write_data, make_get_request):
     assert response.status == 200
     body = await response.json()
     assert person == Person(**body)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures('persons_index')
+async def test_get_not_existing_person_by_id(make_get_request):
+    response = await make_get_request(f'api/v1/persons/{uuid.uuid4()}')
+    assert response.status == 404
