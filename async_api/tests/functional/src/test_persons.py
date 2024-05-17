@@ -4,6 +4,7 @@ import random
 from typing import Any, Dict, List
 
 import pytest
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, field_validator
 
 from tests.functional.utils.models import Person, PersonFilm, Film, FilmPerson, FilmGenre
 
@@ -23,7 +24,7 @@ async def test_get_existing_person_by_id(es_write_data, make_get_request) -> Non
 
     assert response.status == 200
     body = await response.json()
-    assert person == Person(**body)
+    assert body == _expected_person(person)
 
 
 @pytest.mark.asyncio
@@ -36,7 +37,7 @@ async def test_get_person_by_id_from_cache(redis_write_data, make_get_request) -
 
     assert response.status == 200
     body = await response.json()
-    assert person == Person(**body)
+    assert body == _expected_person(person)
 
 
 @pytest.mark.asyncio
@@ -62,6 +63,7 @@ async def test_search_returns_correct_persons(es_write_data, make_get_request) -
     assert response.status == 200
     body = await response.json()
     assert len(body) == len(searched_persons)
+    assert body == _expected_persons(searched_persons)
 
 
 @pytest.mark.asyncio
@@ -108,6 +110,7 @@ async def test_get_films_for_person(es_write_data, make_get_request) -> None:
     assert response.status == 200
     body = await response.json()
     assert len(body) == len(films)
+    assert body == _expected_films(films)
 
 
 @pytest.mark.asyncio
@@ -134,6 +137,7 @@ async def test_get_films_for_person_from_cache(redis_write_data, make_get_reques
     assert response.status == 200
     body = await response.json()
     assert len(body) == len(films)
+    assert body == _expected_films(films)
 
 
 def _build_es_person(person: Person) -> List[Dict[str, Any]]:
@@ -189,3 +193,40 @@ def _build_film_person(id: UUID | None = None, name: str = 'Tom Cruise') -> Film
 
 def _build_film_genre() -> FilmGenre:
     return FilmGenre(uuid=uuid.uuid4(), name='comedy')
+
+
+def _expected_person(person: Person) -> Dict[str, Any]:
+    return _PersonResponse.model_validate(person).model_dump()
+
+
+def _expected_persons(persons: List[Person]) -> Dict[str, Any]:
+    return [_PersonResponse.model_validate(person).model_dump() for person in persons]
+
+
+def _expected_films(films: List[Film]) -> Dict[str, Any]:
+    return [_FilmResponse.model_validate(film).model_dump() for film in films]
+
+
+class _BaseModel(PydanticBaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    uuid: str
+
+    @field_validator('uuid', mode='before')
+    @classmethod
+    def uuid_to_str(cls, v: UUID) -> Any:
+        return str(v)
+
+
+class _PersonFilmResponse(_BaseModel):
+    roles: List[str]
+
+
+class _PersonResponse(_BaseModel):
+    full_name: str
+    films: List[_PersonFilmResponse]
+
+
+class _FilmResponse(_BaseModel):
+    title: str
+    imdb_rating: float
