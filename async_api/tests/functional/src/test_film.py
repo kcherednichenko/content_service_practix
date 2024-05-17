@@ -12,20 +12,10 @@ _FILM_CACHE_PREFIX = 'films'
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('films_index')
 async def test_get_existing_film_by_id_from_db(es_write_data, make_get_request):
-    film_id = uuid.uuid4()
-    film = Film(
-        id=film_id,
-        title='title',
-        description='description',
-        imdb_rating=10.0,
-        genres=[FilmGenre(id=uuid.uuid4(), name='Comedy'), FilmGenre(id=uuid.uuid4(), name='TV Show')],
-        actors=[FilmPerson(id=uuid.uuid4(), name='Actor 1'), FilmPerson(id=uuid.uuid4(), name='Actor 2')],
-        writers=[FilmPerson(id=uuid.uuid4(), name='Writer 1'), FilmPerson(id=uuid.uuid4(), name='Writer 2')],
-        directors=[FilmPerson(id=uuid.uuid4(), name='Director 1'), FilmPerson(id=uuid.uuid4(), name='Director 2')],
-    )
-    await es_write_data([{'_index': _MOVIES_INDEX_NAME, '_id': str(film_id), '_source': film.model_dump()}])
+    film = generate_films(cnt=1)[0]
+    await es_write_data([{'_index': _MOVIES_INDEX_NAME, '_id': str(film.id), '_source': film.model_dump()}])
 
-    response = await make_get_request(f'api/v1/films/{film_id}')
+    response = await make_get_request(f'api/v1/films/{film.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -70,7 +60,6 @@ async def test_search_existing_film(es_write_data, make_get_request):
 
     assert response.status == 200
     body = await response.json()
-
     assert cnt_films_with_keyword == len(body)
 
     for film in body:
@@ -85,7 +74,6 @@ async def test_search_not_existing_film(es_write_data, make_get_request):
 
     assert response.status == 200
     body = await response.json()
-
     assert len(body) == 0
 
 
