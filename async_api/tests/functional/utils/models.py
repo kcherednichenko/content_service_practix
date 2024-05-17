@@ -15,3 +15,21 @@ class PersonFilm(BaseModel):
 class Person(BaseModel):
     full_name: str
     films: List[PersonFilm]
+
+
+class FilmPerson(BaseModel):
+    name: str = Field(validation_alias=AliasChoices('name', 'full_name'), serialization_alias='name')
+
+
+class FilmGenre(BaseModel):
+    name: str
+
+
+class Film(BaseModel):
+    title: str
+    description: str
+    imdb_rating: float
+    genres: List[FilmGenre] = []
+    actors: List[FilmPerson] = []
+    writers: List[FilmPerson] = []
+    directors: List[FilmPerson] = []
