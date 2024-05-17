@@ -5,12 +5,13 @@ import pytest
 
 from tests.functional.utils.models import Film, FilmGenre, FilmPerson
 
-_MOVIES_INDEX_NAME = "movies"
+_MOVIES_INDEX_NAME = 'movies'
+_FILM_CACHE_PREFIX = 'films'
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('films_index')
-async def test_get_existing_film_by_id(es_write_data, make_get_request):
+async def test_get_existing_film_by_id_from_db(es_write_data, make_get_request):
     film_id = uuid.uuid4()
     film = Film(
         id=film_id,
@@ -25,6 +26,20 @@ async def test_get_existing_film_by_id(es_write_data, make_get_request):
     await es_write_data([{'_index': _MOVIES_INDEX_NAME, '_id': str(film_id), '_source': film.model_dump()}])
 
     response = await make_get_request(f'api/v1/films/{film_id}')
+
+    assert response.status == 200
+    body = await response.json()
+    assert film == Film(**body)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures('films_index')
+async def test_get_existing_film_by_id_from_cache(redis_write_data, make_get_request):
+    film = generate_films(cnt=1)[0]
+    cache_key = f'{_FILM_CACHE_PREFIX}:{film.id}'
+    await redis_write_data(cache_key, film.model_dump_json())
+
+    response = await make_get_request(f'api/v1/films/{film.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -54,10 +69,10 @@ async def test_search_existing_film(es_write_data, make_get_request):
         assert query in film['title']
 
 
-def generate_films(keyword, cnt=10):
+def generate_films(keyword=None, cnt=10):
     film_genres = generate_film_genres(2)
     film_persons = generate_film_persons(2)
-    titles = ['title', 'title ' + keyword]
+    titles = ['title', 'title ' + keyword] if keyword else ['title']
     films = []
     for i in range(cnt):
         film_id = uuid.uuid4()
