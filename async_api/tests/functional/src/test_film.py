@@ -48,6 +48,14 @@ async def test_get_existing_film_by_id_from_cache(redis_write_data, make_get_req
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('films_index')
+async def test_get_not_existing_film_by_id(make_get_request):
+    response = await make_get_request(f'api/v1/films/{uuid.uuid4()}')
+
+    assert response.status == 404
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures('films_index')
 async def test_search_existing_film(es_write_data, make_get_request):
     query = 'test'
     films = generate_films(keyword=query, cnt=10)
@@ -67,6 +75,18 @@ async def test_search_existing_film(es_write_data, make_get_request):
 
     for film in body:
         assert query in film['title']
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures('films_index')
+async def test_search_not_existing_film(es_write_data, make_get_request):
+    query = 'no_such_film'
+    response = await make_get_request(f'api/v1/films/search?query={query}')
+
+    assert response.status == 200
+    body = await response.json()
+
+    assert len(body) == 0
 
 
 def generate_films(keyword=None, cnt=10):
