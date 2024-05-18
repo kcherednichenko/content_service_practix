@@ -8,8 +8,8 @@ from pydantic import BaseModel as PydanticBaseModel, ConfigDict, field_validator
 
 from tests.functional.utils.models import Person, PersonFilm, Film, FilmPerson, FilmGenre
 
-_PERSONS_INDEX_NAME = "personas"
-_FILMS_INDEX_NAME = "movies"
+_PERSONS_INDEX_NAME = 'personas'
+_FILMS_INDEX_NAME = 'movies'
 _PERSON_ID_KEY_PREFIX = 'person_id_'
 _FILMS_ID_KEY_PREFIX = 'films'
 
@@ -51,11 +51,11 @@ async def test_get_not_existing_person_by_id(make_get_request) -> None:
 @pytest.mark.usefixtures('persons_index')
 async def test_search_returns_correct_persons(es_write_data, make_get_request) -> None:
     searched_persons = [
-        _build_person("Tom Cucurus"),
-        _build_person("Tom Crus"),
-        _build_person("Tom Shruz"),
+        _build_person('Tom Cucurus'),
+        _build_person('Tom Crus'),
+        _build_person('Tom Shruz'),
     ]
-    not_searched_person = _build_person("Someone Else")
+    not_searched_person = _build_person('Someone Else')
     await es_write_data([_build_es_person(p) for p in [*searched_persons, not_searched_person]])
 
     response = await make_get_request('api/v1/persons/search', {'query': 'Tom'})
@@ -69,7 +69,7 @@ async def test_search_returns_correct_persons(es_write_data, make_get_request) -
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('persons_index')
 async def test_search_no_persons(es_write_data, make_get_request) -> None:
-    persons = [_build_person("Tom Cucurus") for _ in range(5)]
+    persons = [_build_person('Tom Cucurus') for _ in range(5)]
     await es_write_data([_build_es_person(p) for p in persons])
 
     response = await make_get_request('api/v1/persons/search', {'query': 'Someone Else'})
@@ -91,7 +91,7 @@ async def test_no_films_for_person(es_write_data, make_get_request) -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('persons_index', 'films_index')
 async def test_get_films_for_person(es_write_data, make_get_request) -> None:
-    person = _build_person(full_name="Tom Cucurus")
+    person = _build_person(full_name='Tom Cucurus')
     films = [
         _build_film(actors=[_build_film_person(id=person.uuid, name=person.full_name)]),
         _build_film(writers=[_build_film_person(id=person.uuid, name=person.full_name)]),
@@ -115,7 +115,7 @@ async def test_get_films_for_person(es_write_data, make_get_request) -> None:
 
 @pytest.mark.asyncio
 async def test_get_films_for_person_from_cache(redis_write_data, make_get_request) -> None:
-    person = _build_person(full_name="Tom Cucurus")
+    person = _build_person(full_name='Tom Cucurus')
     films = [
         _build_film(actors=[_build_film_person(id=person.uuid, name=person.full_name)]),
         _build_film(writers=[_build_film_person(id=person.uuid, name=person.full_name)]),
@@ -129,7 +129,7 @@ async def test_get_films_for_person_from_cache(redis_write_data, make_get_reques
     person_redis_key = _PERSON_ID_KEY_PREFIX + str(person.uuid)
     await redis_write_data(person_redis_key, person.model_dump_json(by_alias=True))
     for film in films:
-        film_redis_key = _FILMS_ID_KEY_PREFIX + ":" + str(film.uuid)
+        film_redis_key = _FILMS_ID_KEY_PREFIX + ':' + str(film.uuid)
         await redis_write_data(film_redis_key, film.model_dump_json(by_alias=True))
 
     response = await make_get_request(f'api/v1/persons/{person.uuid}/film')
