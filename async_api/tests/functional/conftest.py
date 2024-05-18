@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 from pathlib import Path
+import asyncio
 
 import aiohttp
 import pytest_asyncio
@@ -14,7 +15,14 @@ from tests.functional.settings import test_settings
 _TEST_REDIS_KEY_EXPIRE_IN_SECONDS = 10
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope='session')
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="session")
 async def es_client():
     es_client = AsyncElasticsearch(f'http://{test_settings.elastic_host}:{test_settings.elastic_port}',
                                    verify_certs=False)
@@ -22,7 +30,7 @@ async def es_client():
     await es_client.close()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session")
 async def redis_client():
     redis_client = Redis(host=test_settings.redis_host, port=test_settings.redis_port)
     yield redis_client
@@ -45,7 +53,7 @@ def redis_write_data(redis_client):
     return inner
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session")
 async def aiohttp_session():
     session = aiohttp.ClientSession()
     yield session
