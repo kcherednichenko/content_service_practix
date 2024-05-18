@@ -1,7 +1,7 @@
-from typing import List, Dict, Any
+from typing import List
 from uuid import UUID
 
-from pydantic import BaseModel as PydanticBaseModel, Field, AliasChoices, root_validator, field_validator
+from pydantic import BaseModel as PydanticBaseModel, Field, AliasChoices
 
 
 class BaseModel(PydanticBaseModel):
@@ -18,13 +18,7 @@ class Person(BaseModel):
 
 
 class FilmPerson(BaseModel):
-    name: str
-
-    @root_validator(pre=True)
-    def name_alias(cls, values: Dict[str, Any]):
-        if 'full_name' in values:
-            values['name'] = values['full_name']
-        return values
+    name: str = Field(validation_alias=AliasChoices('name', 'full_name'), serialization_alias='name')
 
 
 class FilmGenre(BaseModel):
@@ -39,8 +33,3 @@ class Film(BaseModel):
     actors: List[FilmPerson] = []
     writers: List[FilmPerson] = []
     directors: List[FilmPerson] = []
-
-    @field_validator('description', mode='before')
-    @classmethod
-    def apply_default_description_on_none(cls, v: Any) -> Any:
-        return '' if v is None else v

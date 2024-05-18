@@ -3,7 +3,7 @@ import uuid
 import pytest
 
 from tests.functional.utils.models import Film
-from tests.functional.utils.generate_data import generate_films
+from tests.functional.utils.data_generators import generate_films
 
 _MOVIES_INDEX_NAME = 'movies'
 _FILM_CACHE_PREFIX = 'films'
