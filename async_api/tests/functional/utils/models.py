@@ -5,7 +5,7 @@ from pydantic import BaseModel as PydanticBaseModel, Field, AliasChoices
 
 
 class BaseModel(PydanticBaseModel):
-    uuid: UUID = Field(validation_alias=AliasChoices('id', 'uuid'), serialization_alias='id')
+    id: UUID = Field(validation_alias=AliasChoices('id', 'uuid'))
 
 
 class PersonFilm(BaseModel):

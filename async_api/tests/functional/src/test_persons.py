@@ -3,7 +3,7 @@ from uuid import UUID
 from typing import Any, Dict, List
 
 import pytest
-from pydantic import BaseModel as PydanticBaseModel, ConfigDict, field_validator
+from pydantic import BaseModel as PydanticBaseModel, ConfigDict, field_validator, Field
 
 from tests.functional.utils.models import Person, Film, FilmPerson
 from tests.functional.utils.data_generators import generate_films, generate_persons, generate_person
@@ -20,7 +20,7 @@ async def test_get_existing_person_by_id(es_write_data, make_get_request) -> Non
     person = generate_person()
     await es_write_data([_build_es_person(person)])
 
-    response = await make_get_request(f'api/v1/persons/{person.uuid}')
+    response = await make_get_request(f'api/v1/persons/{person.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -30,10 +30,10 @@ async def test_get_existing_person_by_id(es_write_data, make_get_request) -> Non
 @pytest.mark.asyncio
 async def test_get_person_by_id_from_cache(redis_write_data, make_get_request) -> None:
     person = generate_person()
-    redis_key = _PERSON_ID_KEY_PREFIX + str(person.uuid)
-    await redis_write_data(redis_key, person.model_dump_json(by_alias=True))
+    redis_key = _PERSON_ID_KEY_PREFIX + str(person.id)
+    await redis_write_data(redis_key, person.model_dump_json())
 
-    response = await make_get_request(f'api/v1/persons/{person.uuid}')
+    response = await make_get_request(f'api/v1/persons/{person.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -80,7 +80,7 @@ async def test_no_films_for_person(es_write_data, make_get_request) -> None:
     person = generate_person(films=[])
     await es_write_data([_build_es_person(person)])
 
-    response = await make_get_request(f'api/v1/persons/{person.uuid}/film')
+    response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
     assert response.status == 404
 
@@ -98,7 +98,7 @@ async def test_get_films_for_person(es_write_data, make_get_request) -> None:
     await es_write_data([_build_es_person(person)])
     await es_write_data([_build_es_film(film) for film in films])
 
-    response = await make_get_request(f'api/v1/persons/{person.uuid}/film')
+    response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
     assert response.status == 200
     body = await response.json()
@@ -115,13 +115,13 @@ async def test_get_films_for_person_from_cache(redis_write_data, make_get_reques
         *generate_films(directors=[FilmPerson(id=person_id, name=person_full_name)], cnt=3),
     ]
     person = generate_person(id=person_id, full_name=person_full_name, films=films)
-    person_redis_key = _PERSON_ID_KEY_PREFIX + str(person.uuid)
-    await redis_write_data(person_redis_key, person.model_dump_json(by_alias=True))
+    person_redis_key = _PERSON_ID_KEY_PREFIX + str(person.id)
+    await redis_write_data(person_redis_key, person.model_dump_json())
     for film in films:
-        film_redis_key = _FILMS_ID_KEY_PREFIX + ':' + str(film.uuid)
-        await redis_write_data(film_redis_key, film.model_dump_json(by_alias=True))
+        film_redis_key = _FILMS_ID_KEY_PREFIX + ':' + str(film.id)
+        await redis_write_data(film_redis_key, film.model_dump_json())
 
-    response = await make_get_request(f'api/v1/persons/{person.uuid}/film')
+    response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
     assert response.status == 200
     body = await response.json()
@@ -140,8 +140,8 @@ def _build_es_film(film: Film) -> List[Dict[str, Any]]:
 def _build_es_item(model: Person | Film, index_name: str) -> List[Dict[str, Any]]:
     return {
         '_index': index_name,
-        '_id': str(model.uuid),
-        '_source': model.model_dump(by_alias=True)
+        '_id': str(model.id),
+        '_source': model.model_dump()
     }
 
 
@@ -160,7 +160,7 @@ def _expected_films(films: List[Film]) -> Dict[str, Any]:
 class _BaseModel(PydanticBaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    uuid: str
+    uuid: str = Field(validation_alias='id')
 
     @field_validator('uuid', mode='before')
     @classmethod

@@ -13,10 +13,9 @@ _FILM_CACHE_PREFIX = 'films'
 @pytest.mark.usefixtures('films_index')
 async def test_get_existing_film_by_id_from_db(es_write_data, make_get_request):
     film = generate_films(cnt=1)[0]
-    await es_write_data(
-        [{'_index': _MOVIES_INDEX_NAME, '_id': str(film.uuid), '_source': film.model_dump(by_alias=True)}])
+    await es_write_data([{'_index': _MOVIES_INDEX_NAME, '_id': str(film.id), '_source': film.model_dump()}])
 
-    response = await make_get_request(f'api/v1/films/{film.uuid}')
+    response = await make_get_request(f'api/v1/films/{film.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -27,10 +26,10 @@ async def test_get_existing_film_by_id_from_db(es_write_data, make_get_request):
 @pytest.mark.usefixtures('films_index')
 async def test_get_existing_film_by_id_from_cache(redis_write_data, make_get_request):
     film = generate_films(cnt=1)[0]
-    cache_key = f'{_FILM_CACHE_PREFIX}:{film.uuid}'
-    await redis_write_data(cache_key, film.model_dump_json(by_alias=True))
+    cache_key = f'{_FILM_CACHE_PREFIX}:{film.id}'
+    await redis_write_data(cache_key, film.model_dump_json())
 
-    response = await make_get_request(f'api/v1/films/{film.uuid}')
+    response = await make_get_request(f'api/v1/films/{film.id}')
 
     assert response.status == 200
     body = await response.json()
@@ -55,8 +54,7 @@ async def test_search_existing_film(es_write_data, make_get_request):
         if query in film.title:
             cnt_films_with_keyword += 1
 
-        await es_write_data(
-            [{'_index': _MOVIES_INDEX_NAME, '_id': str(film.uuid), '_source': film.model_dump(by_alias=True)}])
+        await es_write_data([{'_index': _MOVIES_INDEX_NAME, '_id': str(film.id), '_source': film.model_dump()}])
 
     response = await make_get_request(f'api/v1/films/search?query={query}')
 

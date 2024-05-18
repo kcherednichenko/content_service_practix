@@ -57,7 +57,7 @@ def generate_person(id: UUID | None = None,
     person_films = (_build_person_films_by_films(films, person_id)
                     if films is not None
                     else [_generate_person_film() for _ in range(random.randint(1, 3))])
-    return Person(uuid=person_id, full_name=full_name, films=person_films)
+    return Person(id=person_id, full_name=full_name, films=person_films)
 
 
 def generate_persons(full_name: str = 'full name', cnt: int = 1) -> List[Person]:
@@ -67,7 +67,7 @@ def generate_persons(full_name: str = 'full name', cnt: int = 1) -> List[Person]
 def _generate_person_film(id: UUID | None = None, roles: List[str] | None = None) -> PersonFilm:
     film_roles = ['writer', 'director', 'actor']
     return PersonFilm(
-        uuid=id or uuid.uuid4(),
+        id=id or uuid.uuid4(),
         roles=roles or random.sample(film_roles, random.randint(1, len(film_roles)))
     )
 
@@ -76,12 +76,12 @@ def _build_person_films_by_films(films: List[Film], person_id: UUID) -> List[Per
     person_films = []
     for film in films:
         film_roles = []
-        if person_id in [p.uuid for p in film.actors]:
+        if person_id in [p.id for p in film.actors]:
             film_roles.append('actor')
-        if person_id in [p.uuid for p in film.writers]:
+        if person_id in [p.id for p in film.writers]:
             film_roles.append('writer')
-        if person_id in [p.uuid for p in film.directors]:
+        if person_id in [p.id for p in film.directors]:
             film_roles.append('director')
         if film_roles:
-            person_films.append(PersonFilm(id=film.uuid, roles=film_roles))
+            person_films.append(PersonFilm(id=film.id, roles=film_roles))
     return person_films
