@@ -50,15 +50,12 @@ async def test_get_not_existing_person_by_id(make_get_request) -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('persons_index')
 async def test_search_returns_correct_persons(es_write_data, make_get_request) -> None:
-    searched_persons = [
-        _build_person('Tom Cucurus'),
-        _build_person('Tom Crus'),
-        _build_person('Tom Shruz'),
-    ]
-    not_searched_person = _build_person('Someone Else')
-    await es_write_data([_build_es_person(p) for p in [*searched_persons, not_searched_person]])
+    first_name = 'Tom'
+    searched_persons = _build_persons(first_name, quantity=3)
+    not_searched_persons = _build_persons(quantity=3)
+    await es_write_data([_build_es_person(p) for p in [*searched_persons, *not_searched_persons]])
 
-    response = await make_get_request('api/v1/persons/search', {'query': 'Tom'})
+    response = await make_get_request('api/v1/persons/search', {'query': first_name})
 
     assert response.status == 200
     body = await response.json()
@@ -91,17 +88,17 @@ async def test_no_films_for_person(es_write_data, make_get_request) -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('persons_index', 'films_index')
 async def test_get_films_for_person(es_write_data, make_get_request) -> None:
-    person = _build_person(full_name='Tom Cucurus')
+    person_id, person_full_name = uuid.uuid4(), 'Tom Cucurus'
     films = [
-        _build_film(actors=[_build_film_person(id=person.uuid, name=person.full_name)]),
-        _build_film(writers=[_build_film_person(id=person.uuid, name=person.full_name)]),
-        _build_film(directors=[_build_film_person(id=person.uuid, name=person.full_name)]),
+        _build_film(actors=[_build_film_person(id=person_id, name=person_full_name)]),
+        _build_film(writers=[_build_film_person(id=person_id, name=person_full_name)]),
+        _build_film(directors=[_build_film_person(id=person_id, name=person_full_name)]),
     ]
-    person.films = [
+    person = _build_person(full_name=person_full_name, films=[
         _build_person_film(id=films[0].uuid, roles=['actor']),
         _build_person_film(id=films[1].uuid, roles=['writer']),
         _build_person_film(id=films[2].uuid, roles=['director']),
-    ]
+    ])
     await es_write_data([_build_es_person(person)])
     await es_write_data([_build_es_film(film) for film in films])
 
@@ -115,17 +112,17 @@ async def test_get_films_for_person(es_write_data, make_get_request) -> None:
 
 @pytest.mark.asyncio
 async def test_get_films_for_person_from_cache(redis_write_data, make_get_request) -> None:
-    person = _build_person(full_name='Tom Cucurus')
+    person_id, person_full_name = uuid.uuid4(), 'Tom Cucurus'
     films = [
-        _build_film(actors=[_build_film_person(id=person.uuid, name=person.full_name)]),
-        _build_film(writers=[_build_film_person(id=person.uuid, name=person.full_name)]),
-        _build_film(directors=[_build_film_person(id=person.uuid, name=person.full_name)]),
+        _build_film(actors=[_build_film_person(id=person_id, name=person_full_name)]),
+        _build_film(writers=[_build_film_person(id=person_id, name=person_full_name)]),
+        _build_film(directors=[_build_film_person(id=person_id, name=person_full_name)]),
     ]
-    person.films = [
+    person = _build_person(full_name=person_full_name, films=[
         _build_person_film(id=films[0].uuid, roles=['actor']),
         _build_person_film(id=films[1].uuid, roles=['writer']),
         _build_person_film(id=films[2].uuid, roles=['director']),
-    ]
+    ])
     person_redis_key = _PERSON_ID_KEY_PREFIX + str(person.uuid)
     await redis_write_data(person_redis_key, person.model_dump_json(by_alias=True))
     for film in films:
@@ -162,6 +159,11 @@ def _build_person(full_name: str = 'full name', films: List[PersonFilm] | None =
         full_name=full_name,
         films=films if films is not None else [_build_person_film() for _ in range(random.randint(1, 3))]
     )
+
+
+def _build_persons(first_name: str = '',  last_name: str = '', quantity: int = 1) -> List[Person]:
+    full_name = f'{first_name or uuid.uuid4()} {last_name or uuid.uuid4()}'
+    return [_build_person(full_name=full_name) for _ in range(quantity)]
 
 
 def _build_person_film(id: UUID | None = None, roles: List[str] | None = None) -> PersonFilm:
