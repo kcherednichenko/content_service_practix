@@ -9,11 +9,11 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
+from db.cache_storage import RedisCacheStorage
 from models.person import Person
 from models.film import Film
 from services.film import FilmService
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 minutes
 PERSON_ID_KEY_PREFIX = 'person_id_'
 INDEX_NAME = 'personas'
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class PersonService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+        self.redis = RedisCacheStorage(redis)
         self.elastic = elastic
 
     async def search(self, query: str, limit: int, offset: int) -> List[Person] | None:
@@ -75,7 +75,7 @@ class PersonService:
 
     async def _put_person_to_cache(self, person: Person):
         logger.info('Putting person to cache. person = %s', person.id)
-        await self.redis.set(f'{PERSON_ID_KEY_PREFIX}{person.id}', person.json(), PERSON_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(f'{PERSON_ID_KEY_PREFIX}{person.id}', person.json())
 
     async def _search_persons_in_elastic(self, query: str, limit: int, offset: int) -> List[Person] | None:
         query = {

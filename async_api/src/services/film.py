@@ -11,9 +11,9 @@ from redis import RedisError
 
 from db.elastic import get_elastic
 from db.redis import get_redis
+from db.cache_storage import RedisCacheStorage
 from models.film import Film
 
-_FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 minutes
 _FILM_INDEX = 'movies'
 _CACHE_PREFIX = 'films'
 
@@ -26,7 +26,7 @@ class FilmServiceError(Exception):
 
 class FilmService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+        self.redis = RedisCacheStorage(redis)
         self.elastic = elastic
 
     async def get_films(self, genre_id: UUID | None, limit: int = 50, offset: int = 0) -> List[Film]:
@@ -84,7 +84,7 @@ class FilmService:
         key = self._films_cache_key(genre_id, limit, offset)
         data = orjson.dumps([f.dict() for f in films])
         try:
-            await self.redis.set(key, data, _FILM_CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(key, data)
         except RedisError as e:
             logger.error('Failed to put films got by params genre %s, limit %s, offset %s to cache: %s',
                          genre_id, limit, offset, e)
@@ -132,7 +132,7 @@ class FilmService:
     async def _put_film_to_cache(self, film: Film) -> None:
         logger.info('Putting film with id %s to cache', film.id)
         try:
-            await self.redis.set(self._film_cache_key(film.id), film.json(), _FILM_CACHE_EXPIRE_IN_SECONDS)
+            await self.redis.set(self._film_cache_key(film.id), film.json())
         except RedisError as e:
             logger.error('Failed to put film with id %s to cache: %s', film.id, e)
 

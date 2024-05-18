@@ -10,9 +10,9 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
+from db.cache_storage import RedisCacheStorage
 from models.genre import Genre, Genres
 
-GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 minutes
 GENRE_ID_KEY_PREFIX = 'genre_id_'
 ALL_GENRES_KEY = 'all_genres'
 INDEX_NAME = 'genres'
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class GenreService:
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+        self.redis = RedisCacheStorage(redis)
         self.elastic = elastic
 
     async def get_by_id(self, genre_id: UUID) -> Genre | None:
@@ -82,7 +82,7 @@ class GenreService:
 
     async def _put_genre_to_cache(self, genre: Genre):
         logger.info('Putting genre to cache. genre_id = %s', genre.id)
-        await self.redis.set(f'{GENRE_ID_KEY_PREFIX}{genre.id}', genre.json(), GENRE_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(f'{GENRE_ID_KEY_PREFIX}{genre.id}', genre.json())
 
     async def _all_genres_from_cache(self) -> List[Genre] | None:
         data = await self.redis.get(ALL_GENRES_KEY)
@@ -95,8 +95,7 @@ class GenreService:
 
     async def _put_all_genres_to_cache(self, genres: Genres):
         logger.info('Putting all genres to cache')
-        await self.redis.set(ALL_GENRES_KEY, json.dumps(genres.__dict__, default=lambda o: o.__dict__),
-                             GENRE_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(ALL_GENRES_KEY, json.dumps(genres.__dict__, default=lambda o: o.__dict__))
 
 
 @lru_cache()
