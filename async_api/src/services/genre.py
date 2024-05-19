@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
-from db.cache_storage import RedisCacheStorage
+from db.cache_storage import RedisCacheStorage, CacheStorage
 from models.genre import Genre, Genres
 
 GENRE_ID_KEY_PREFIX = 'genre_id_'
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 class GenreService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = RedisCacheStorage(redis)
+    def __init__(self, cache_storage: CacheStorage, elastic: AsyncElasticsearch):
+        self.cache_storage = cache_storage
         self.elastic = elastic
 
     async def get_by_id(self, genre_id: UUID) -> Genre | None:
@@ -72,7 +72,7 @@ class GenreService:
         return all_genres
 
     async def _genre_from_cache(self, genre_id: UUID) -> Genre | None:
-        data = await self.redis.get(f'{GENRE_ID_KEY_PREFIX}{genre_id}')
+        data = await self.cache_storage.get(f'{GENRE_ID_KEY_PREFIX}{genre_id}')
         if not data:
             return None
 
@@ -82,10 +82,10 @@ class GenreService:
 
     async def _put_genre_to_cache(self, genre: Genre):
         logger.info('Putting genre to cache. genre_id = %s', genre.id)
-        await self.redis.set(f'{GENRE_ID_KEY_PREFIX}{genre.id}', genre.json())
+        await self.cache_storage.set(f'{GENRE_ID_KEY_PREFIX}{genre.id}', genre.json())
 
     async def _all_genres_from_cache(self) -> List[Genre] | None:
-        data = await self.redis.get(ALL_GENRES_KEY)
+        data = await self.cache_storage.get(ALL_GENRES_KEY)
         if not data:
             return None
 
@@ -95,7 +95,7 @@ class GenreService:
 
     async def _put_all_genres_to_cache(self, genres: Genres):
         logger.info('Putting all genres to cache')
-        await self.redis.set(ALL_GENRES_KEY, json.dumps(genres.__dict__, default=lambda o: o.__dict__))
+        await self.cache_storage.set(ALL_GENRES_KEY, json.dumps(genres.__dict__, default=lambda o: o.__dict__))
 
 
 @lru_cache()
@@ -103,4 +103,4 @@ def get_genre_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
-    return GenreService(redis, elastic)
+    return GenreService(RedisCacheStorage(redis), elastic)

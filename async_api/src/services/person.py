@@ -9,7 +9,7 @@ from redis.asyncio import Redis
 
 from db.elastic import get_elastic
 from db.redis import get_redis
-from db.cache_storage import RedisCacheStorage
+from db.cache_storage import RedisCacheStorage, CacheStorage
 from models.person import Person
 from models.film import Film
 from services.film import FilmService
@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 class PersonService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = RedisCacheStorage(redis)
+    def __init__(self, cache_storage: CacheStorage, elastic: AsyncElasticsearch):
+        self.cache_storage = cache_storage
         self.elastic = elastic
 
     async def search(self, query: str, limit: int, offset: int) -> List[Person] | None:
@@ -47,7 +47,7 @@ class PersonService:
             await self._put_person_to_cache(person)
 
         films = []
-        film_service = FilmService(redis=self.redis, elastic=self.elastic)
+        film_service = FilmService(redis=self.cache_storage, elastic=self.elastic)
         for film in person.films:
             cur_film = await film_service.get_film_by_id(film['id'])
             films.append(cur_film)
@@ -65,7 +65,7 @@ class PersonService:
         return Person(**doc['_source'])
 
     async def _person_from_cache(self, person_id: UUID) -> Person | None:
-        data = await self.redis.get(f'{PERSON_ID_KEY_PREFIX}{person_id}')
+        data = await self.cache_storage.get(f'{PERSON_ID_KEY_PREFIX}{person_id}')
         if not data:
             return None
 
@@ -75,7 +75,7 @@ class PersonService:
 
     async def _put_person_to_cache(self, person: Person):
         logger.info('Putting person to cache. person = %s', person.id)
-        await self.redis.set(f'{PERSON_ID_KEY_PREFIX}{person.id}', person.json())
+        await self.cache_storage.set(f'{PERSON_ID_KEY_PREFIX}{person.id}', person.json())
 
     async def _search_persons_in_elastic(self, query: str, limit: int, offset: int) -> List[Person] | None:
         query = {
@@ -109,4 +109,4 @@ def get_person_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonService:
-    return PersonService(redis, elastic)
+    return PersonService(RedisCacheStorage(redis), elastic)
