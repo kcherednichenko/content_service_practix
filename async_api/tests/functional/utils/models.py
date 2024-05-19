@@ -33,3 +33,12 @@ class Film(BaseModel):
     actors: List[FilmPerson] = []
     writers: List[FilmPerson] = []
     directors: List[FilmPerson] = []
+
+
+class Genre(BaseModel):
+    id: UUID
+    name: str
+
+
+class Genres(BaseModel):
+    genres: List[Genre]
