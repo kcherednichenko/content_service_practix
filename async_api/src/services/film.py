@@ -1,20 +1,21 @@
 from functools import lru_cache
-from typing import Any, Dict, List
+from typing import List
 from uuid import UUID
 import logging
 import orjson
 
-from elasticsearch import AsyncElasticsearch, NotFoundError, ConnectionError
 from fastapi import Depends
 from redis.asyncio import Redis
 from redis import RedisError
 
+from elasticsearch import AsyncElasticsearch
 from db.elastic import get_elastic
+from db.storage import AbstractStorage, ElasticStorage, StorageError, StorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.film import Film
 
-_FILM_INDEX = 'movies'
+_FILM_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 minutes
 _CACHE_PREFIX = 'films'
 
 logger = logging.getLogger(__name__)
@@ -25,47 +26,43 @@ class FilmServiceError(Exception):
 
 
 class FilmService:
-    def __init__(self, cache_storage: AbstractCacheStorage, elastic: AsyncElasticsearch):
+    def __init__(self, cache_storage: AbstractCacheStorage, storage: AbstractStorage):
         self.cache_storage = cache_storage
-        self.elastic = elastic
+        self.storage = storage
 
     async def get_films(self, genre_id: UUID | None, limit: int = 50, offset: int = 0) -> List[Film]:
         logger.info('Getting films, genre %s, limit %s offset %s', genre_id, limit, offset)
         films = await self._get_films_from_cache(genre_id, limit, offset)
         if films is None:
-            films = await self._get_films_from_elastic(genre_id, limit, offset)
+            films = await self._get_films_from_storage(genre_id, limit, offset)
             if films:
                 await self._put_films_to_cache(films, genre_id, limit, offset)
         return films
 
     async def get_films_by_query(self, query: str, limit: int = 50, offset: int = 0) -> List[Film]:
         logger.info('Getting films by query %s, limit %s offset %s', query, limit, offset)
-        return await self._get_films_by_query_from_elastic(query, limit, offset)
+        return await self._get_films_by_query_from_storage(query, limit, offset)
 
     async def get_film_by_id(self, film_id: UUID) -> Film | None:
         logger.info('Getting film by id %s', film_id)
         film = await self._get_film_from_cache(film_id)
         if not film:
-            film = await self._get_film_from_elastic(film_id)
+            film = await self._get_film_from_storage(film_id)
             if not film:
                 return None
             await self._put_film_to_cache(film)
         return film
 
-    async def _get_films_from_elastic(self, genre_id: UUID | None, limit: int, offset: int) -> List[Film]:
-        query_body = {
-            'sort': {'imdb_rating': 'desc'},
-            **self._get_elastic_pagination_fields(limit, offset),
-        }
-        if genre_id:
-            query_body.update({
-                'query': {
-                    'nested': {
-                        'path': 'genres',
-                        'query': {'match': {'genres.id': {'query': genre_id}}}
-                    }
-                }})
-        return await self._request_films_from_elastic(query_body)
+    async def _get_films_from_storage(self, genre_id: UUID | None, limit: int, offset: int) -> List[Film]:
+        logger.info('Getting films from storage, genre %s, limit %s, offset %s', genre_id, limit, offset)
+        try:
+            films = await self.storage.get(
+                StorageEntity.FILM, genres__id=genre_id, limit=limit, offset=offset, sort_by='-imdb_rating')
+        except StorageError as e:
+            logger.error('Failed to get films from storage, genre %s, limit %s, offset %s: %s',
+                         genre_id, limit, offset, e)
+            raise FilmServiceError
+        return [Film(**f) for f in films]
 
     async def _get_films_from_cache(self, genre_id: UUID | None, limit: int, offset: int) -> List[Film] | None:
         logger.info('Checking cache to get films by params, genre %s, limit %s, offset %s', genre_id, limit, offset)
@@ -89,33 +86,24 @@ class FilmService:
             logger.error('Failed to put films got by params genre %s, limit %s, offset %s to cache: %s',
                          genre_id, limit, offset, e)
 
-    async def _get_films_by_query_from_elastic(self, query: str, limit: int, offset: int) -> List[Film]:
-        query_body = {
-            'query': {'query_string': {'query': query}},
-            **self._get_elastic_pagination_fields(limit, offset),
-        }
-        return await self._request_films_from_elastic(query_body)
-
-    async def _request_films_from_elastic(self, query_body: Dict[str, Any]) -> List[Film]:
-        logger.info('Searching films from elastic by query: %s', query_body)
+    async def _get_films_by_query_from_storage(self, query: str, limit: int, offset: int) -> List[Film]:
+        logger.info('Getting films from storage by query %s, limit %s, offset %s', query, limit, offset)
         try:
-            response = await self.elastic.search(index=_FILM_INDEX, body=query_body)
-        except ConnectionError:
-            logger.error('Failed to search films from elastic by query: %s', query_body)
+            films = await self.storage.search(StorageEntity.FILM, query, limit=limit, offset=offset)
+        except StorageError as e:
+            logger.error('Failed to get films from storage by query %s, limit %s, offset %s: %s',
+                         query, limit, offset, e)
             raise FilmServiceError
-        films = (response.get('hits') or {}).get('hits') or []
-        return [Film(**f['_source']) for f in films]
+        return [Film(**f) for f in films]
 
-    async def _get_film_from_elastic(self, film_id: UUID) -> Film | None:
-        logger.info('Getting film by id %s from elastic', film_id)
+    async def _get_film_from_storage(self, film_id: UUID) -> Film | None:
+        logger.info('Getting film from storage by id %s', film_id)
         try:
-            doc = await self.elastic.get(index=_FILM_INDEX, id=film_id)
-        except NotFoundError:
+            films = await self.storage.get(StorageEntity.FILM, id=film_id)
+        except StorageError as e:
+            logger.error('Failed to get film from storage by id %s: %s', film_id, e)
             return None
-        except ConnectionError as e:
-            logger.error('Failed to get film by id %s from elastic: %s', film_id, e)
-            raise FilmServiceError
-        return Film(**doc['_source'])
+        return Film(**films[0]) if films else None
 
     async def _get_film_from_cache(self, film_id: UUID) -> Film | None:
         logger.info('Checking cache to get film by id %s', film_id)
@@ -137,13 +125,6 @@ class FilmService:
             logger.error('Failed to put film with id %s to cache: %s', film.id, e)
 
     @staticmethod
-    def _get_elastic_pagination_fields(limit: int, offset: int) -> Dict[str, int]:
-        return {
-            'from': offset,
-            'size': limit,
-        }
-
-    @staticmethod
     def _film_cache_key(film_id: UUID) -> str:
         return f'{_CACHE_PREFIX}:{film_id}'
 
@@ -157,4 +138,4 @@ def get_film_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> FilmService:
-    return FilmService(RedisCacheStorage(redis), elastic)
+    return FilmService(RedisCacheStorage(redis), ElasticStorage(elastic))

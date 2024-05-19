@@ -4,31 +4,31 @@ from functools import lru_cache
 from typing import List
 from uuid import UUID
 
-from elasticsearch import AsyncElasticsearch, NotFoundError
+from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
+from db.storage import AbstractStorage, ElasticStorage, StorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.genre import Genre, Genres
 
 GENRE_ID_KEY_PREFIX = 'genre_id_'
 ALL_GENRES_KEY = 'all_genres'
-INDEX_NAME = 'genres'
 
 logger = logging.getLogger(__name__)
 
 
 class GenreService:
-    def __init__(self, cache_storage: AbstractCacheStorage, elastic: AsyncElasticsearch):
+    def __init__(self, cache_storage: AbstractCacheStorage, storage: AbstractStorage):
         self.cache_storage = cache_storage
-        self.elastic = elastic
+        self.storage = storage
 
     async def get_by_id(self, genre_id: UUID) -> Genre | None:
         genre = await self._genre_from_cache(genre_id)
         if not genre:
-            genre = await self._get_genre_from_elastic(genre_id)
+            genre = await self._get_genre_from_storage(genre_id)
             if not genre:
                 return None
             await self._put_genre_to_cache(genre)
@@ -38,38 +38,30 @@ class GenreService:
     async def get_all_genres(self) -> List[Genre] | None:
         genres = await self._all_genres_from_cache()
         if not genres:
-            genres = await self._get_all_genres_from_elastic()
+            genres = await self._get_all_genres_from_storage()
             if not genres:
                 return None
             await self._put_all_genres_to_cache(Genres(genres=genres))
 
         return genres
 
-    async def _get_genre_from_elastic(self, genre_id: UUID) -> Genre | None:
+    async def _get_genre_from_storage(self, genre_id: UUID) -> Genre | None:
         try:
             logger.info('Getting genre from db by id %s', genre_id)
-            doc = await self.elastic.get(index=INDEX_NAME, id=str(genre_id))
-        except NotFoundError:
-            return None
+            genres = await self.storage.get(StorageEntity.GENRE, id=genre_id)
         except Exception as e:
             logger.exception(e)
             raise
-        return Genre(**doc['_source'])
+        return Genre(**genres[0]) if genres else None
 
-    async def _get_all_genres_from_elastic(self):
-        query = {'query': {'match_all': {}}}
+    async def _get_all_genres_from_storage(self) -> List[Genre]:
         try:
             logger.info('Getting all genres from db')
-            docs = await self.elastic.search(index=INDEX_NAME, body=query)
-        except NotFoundError:
-            return None
+            genres = await self.storage.get(StorageEntity.GENRE)
         except Exception as e:
             logger.exception(e)
             raise
-        all_genres = []
-        for doc in docs['hits']['hits']:
-            all_genres.append(Genre(**doc['_source']))
-        return all_genres
+        return [Genre(**genre) for genre in genres]
 
     async def _genre_from_cache(self, genre_id: UUID) -> Genre | None:
         data = await self.cache_storage.get(f'{GENRE_ID_KEY_PREFIX}{genre_id}')
@@ -103,4 +95,4 @@ def get_genre_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
-    return GenreService(RedisCacheStorage(redis), elastic)
+    return GenreService(RedisCacheStorage(redis), ElasticStorage(elastic))
