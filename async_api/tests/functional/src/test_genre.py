@@ -58,6 +58,6 @@ async def test_get_genre_in_redis(redis_write_data, make_get_request):
     cache_key = f"{GENRE_INDEX_NAME}:{genre.id}"
     await redis_write_data(cache_key, genre.model_dump_json())
 
-    response = await make_get_request(f"api/v1/films/{genre.id}")
+    response = await make_get_request(f"api/v1/genres/{genre.id}")
 
     assert response.status == 200
