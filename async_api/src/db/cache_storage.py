@@ -5,7 +5,7 @@ from redis.asyncio import Redis
 CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 minutes
 
 
-class CacheStorage(ABC):
+class AbstractCacheStorage(ABC):
     @abstractmethod
     def set(self, key, value):
         pass
@@ -15,12 +15,12 @@ class CacheStorage(ABC):
         pass
 
 
-class RedisCacheStorage(CacheStorage):
-    def __init__(self, redis_service: Redis):
-        self.redis_service = redis_service
+class RedisCacheStorage(AbstractCacheStorage):
+    def __init__(self, redis: Redis):
+        self.redis = redis
 
     async def set(self, key: str, value: str, expire_in: int = CACHE_EXPIRE_IN_SECONDS):
-        await self.redis_service.set(key, value, expire_in)
+        await self.redis.set(key, value, expire_in)
 
     async def get(self, key: str):
-        return await self.redis_service.get(key)
+        return await self.redis.get(key)

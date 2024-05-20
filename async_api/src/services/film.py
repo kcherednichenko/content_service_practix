@@ -11,7 +11,7 @@ from redis import RedisError
 
 from db.elastic import get_elastic
 from db.redis import get_redis
-from db.cache_storage import RedisCacheStorage, CacheStorage
+from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.film import Film
 
 _FILM_INDEX = 'movies'
@@ -25,7 +25,7 @@ class FilmServiceError(Exception):
 
 
 class FilmService:
-    def __init__(self, cache_storage: CacheStorage, elastic: AsyncElasticsearch):
+    def __init__(self, cache_storage: AbstractCacheStorage, elastic: AsyncElasticsearch):
         self.cache_storage = cache_storage
         self.elastic = elastic
 
