@@ -8,7 +8,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
-from db.data_storage import ElasticStorage, AbstractStorage, StorageEntity
+from db.data_storage import ElasticDataStorage, AbstractDataStorage, DataStorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.person import Person
@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 class PersonService:
-    def __init__(self, cache_storage: AbstractCacheStorage, storage: AbstractStorage):
+    def __init__(self, cache_storage: AbstractCacheStorage, data_storage: AbstractDataStorage):
         self.cache_storage = cache_storage
-        self.storage = storage
+        self.data_storage = data_storage
 
     async def search(self, query: str, limit: int, offset: int) -> List[Person] | None:
         return await self._search_persons_in_storage(query, limit, offset)
@@ -47,7 +47,7 @@ class PersonService:
             await self._put_person_to_cache(person)
 
         films = []
-        film_service = FilmService(redis=self.cache_storage, storage=self.storage)
+        film_service = FilmService(self.cache_storage, self.data_storage)
         for film in person.films:
             cur_film = await film_service.get_film_by_id(film['id'])
             films.append(cur_film)
@@ -56,7 +56,7 @@ class PersonService:
     async def _get_person_from_storage(self, person_id: UUID) -> Person | None:
         try:
             logger.info('Getting person from db by id %s', person_id)
-            persons = await self.storage.get(StorageEntity.PERSON, id=person_id)
+            persons = await self.data_storage.get(DataStorageEntity.PERSON, id=person_id)
         except Exception as e:
             logger.exception(e)
             raise
@@ -78,7 +78,7 @@ class PersonService:
     async def _search_persons_in_storage(self, query: str, limit: int, offset: int) -> List[Person]:
         try:
             logging.info('Searching persons by query = %s', query)
-            persons = await self.storage.search(StorageEntity.PERSON, query, limit, offset)
+            persons = await self.data_storage.search(DataStorageEntity.PERSON, query, limit, offset)
         except Exception as e:
             logger.exception(e)
             raise
@@ -90,4 +90,4 @@ def get_person_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonService:
-    return PersonService(RedisCacheStorage(redis), ElasticStorage(elastic))
+    return PersonService(RedisCacheStorage(redis), ElasticDataStorage(elastic))

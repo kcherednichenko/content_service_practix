@@ -10,7 +10,7 @@ from redis import RedisError
 
 from elasticsearch import AsyncElasticsearch
 from db.elastic import get_elastic
-from db.data_storage import AbstractStorage, ElasticStorage, StorageError, StorageEntity
+from db.data_storage import AbstractDataStorage, ElasticDataStorage, DataStorageError, DataStorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.film import Film
@@ -26,9 +26,9 @@ class FilmServiceError(Exception):
 
 
 class FilmService:
-    def __init__(self, cache_storage: AbstractCacheStorage, storage: AbstractStorage):
+    def __init__(self, cache_storage: AbstractCacheStorage, data_storage: AbstractDataStorage):
         self.cache_storage = cache_storage
-        self.storage = storage
+        self.data_storage = data_storage
 
     async def get_films(self, genre_id: UUID | None, limit: int = 50, offset: int = 0) -> List[Film]:
         logger.info('Getting films, genre %s, limit %s offset %s', genre_id, limit, offset)
@@ -56,9 +56,9 @@ class FilmService:
     async def _get_films_from_storage(self, genre_id: UUID | None, limit: int, offset: int) -> List[Film]:
         logger.info('Getting films from storage, genre %s, limit %s, offset %s', genre_id, limit, offset)
         try:
-            films = await self.storage.get(
-                StorageEntity.FILM, genres__id=genre_id, limit=limit, offset=offset, sort_by='-imdb_rating')
-        except StorageError as e:
+            films = await self.data_storage.get(
+                DataStorageEntity.FILM, genres__id=genre_id, limit=limit, offset=offset, sort_by='-imdb_rating')
+        except DataStorageError as e:
             logger.error('Failed to get films from storage, genre %s, limit %s, offset %s: %s',
                          genre_id, limit, offset, e)
             raise FilmServiceError
@@ -89,8 +89,8 @@ class FilmService:
     async def _get_films_by_query_from_storage(self, query: str, limit: int, offset: int) -> List[Film]:
         logger.info('Getting films from storage by query %s, limit %s, offset %s', query, limit, offset)
         try:
-            films = await self.storage.search(StorageEntity.FILM, query, limit=limit, offset=offset)
-        except StorageError as e:
+            films = await self.data_storage.search(DataStorageEntity.FILM, query, limit=limit, offset=offset)
+        except DataStorageError as e:
             logger.error('Failed to get films from storage by query %s, limit %s, offset %s: %s',
                          query, limit, offset, e)
             raise FilmServiceError
@@ -99,8 +99,8 @@ class FilmService:
     async def _get_film_from_storage(self, film_id: UUID) -> Film | None:
         logger.info('Getting film from storage by id %s', film_id)
         try:
-            films = await self.storage.get(StorageEntity.FILM, id=film_id)
-        except StorageError as e:
+            films = await self.data_storage.get(DataStorageEntity.FILM, id=film_id)
+        except DataStorageError as e:
             logger.error('Failed to get film from storage by id %s: %s', film_id, e)
             return None
         return Film(**films[0]) if films else None
@@ -138,4 +138,4 @@ def get_film_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> FilmService:
-    return FilmService(RedisCacheStorage(redis), ElasticStorage(elastic))
+    return FilmService(RedisCacheStorage(redis), ElasticDataStorage(elastic))

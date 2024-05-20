@@ -8,21 +8,21 @@ from elasticsearch import AsyncElasticsearch, ConnectionError
 logger = logging.getLogger(__name__)
 
 
-class StorageEntity(str, Enum):
+class DataStorageEntity(str, Enum):
     PERSON = 'person'
     FILM = 'film'
     GENRE = 'genre'
 
 
-class StorageError(Exception):
+class DataStorageError(Exception):
     pass
 
 
-class AbstractStorage(ABC):
+class AbstractDataStorage(ABC):
     @abstractmethod
     async def get(
         self,
-        entity: StorageEntity,
+        entity: DataStorageEntity,
         limit: int = 50,
         offset: int = 0,
         sort_by: str = '',
@@ -33,7 +33,7 @@ class AbstractStorage(ABC):
     @abstractmethod
     async def search(
         self,
-        entity: StorageEntity,
+        entity: DataStorageEntity,
         query: str,
         limit: int = 50,
         offset: int = 0
@@ -41,11 +41,11 @@ class AbstractStorage(ABC):
         pass
 
 
-class ElasticStorage(AbstractStorage):
+class ElasticDataStorage(AbstractDataStorage):
     _STORAGE_ENTITY_INDEX_MAP = {
-        StorageEntity.PERSON: 'personas',
-        StorageEntity.FILM: 'movies',
-        StorageEntity.GENRE: 'genres',
+        DataStorageEntity.PERSON: 'personas',
+        DataStorageEntity.FILM: 'movies',
+        DataStorageEntity.GENRE: 'genres',
     }
 
     def __init__(self, elastic: AsyncElasticsearch):
@@ -53,10 +53,10 @@ class ElasticStorage(AbstractStorage):
 
     async def get(
         self,
-        entity: StorageEntity,
+        entity: DataStorageEntity,
         limit: int = 50,
         offset: int = 0,
-        sort_by: str = '',
+        sort_by: str = 'id',
         **query_params
     ) -> List[Dict[str, Any]]:
         logger.info('Getting %s with query params: %s', entity, query_params)
@@ -89,7 +89,7 @@ class ElasticStorage(AbstractStorage):
 
     async def search(
         self,
-        entity: StorageEntity,
+        entity: DataStorageEntity,
         query: str,
         limit: int = 50,
         offset: int = 0
@@ -101,17 +101,17 @@ class ElasticStorage(AbstractStorage):
         }
         return await self._make_request(entity, query_body)
 
-    async def _make_request(self, entity: StorageEntity, query_body: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _make_request(self, entity: DataStorageEntity, query_body: Dict[str, Any]) -> List[Dict[str, Any]]:
         logger.info('Requesting %s with query body: %s', entity, query_body)
         index = self._get_index_by_entity(entity)
         try:
             response = await self._elastic.search(index=index, body=query_body)
         except ConnectionError as e:
             logger.error('Failed to request %s with query body: %s', entity, query_body)
-            raise StorageError(e)
+            raise DataStorageError(e)
         return [f['_source'] for f in ((response.get('hits') or {}).get('hits') or [])]
 
-    def _get_index_by_entity(self, entity: StorageEntity) -> str:
+    def _get_index_by_entity(self, entity: DataStorageEntity) -> str:
         return self._STORAGE_ENTITY_INDEX_MAP[entity]
 
     @staticmethod

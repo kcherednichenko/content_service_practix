@@ -9,7 +9,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
-from db.data_storage import AbstractStorage, ElasticStorage, StorageEntity
+from db.data_storage import AbstractDataStorage, ElasticDataStorage, DataStorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.genre import Genre, Genres
@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 class GenreService:
-    def __init__(self, cache_storage: AbstractCacheStorage, storage: AbstractStorage):
+    def __init__(self, cache_storage: AbstractCacheStorage, data_storage: AbstractDataStorage):
         self.cache_storage = cache_storage
-        self.storage = storage
+        self.data_storage = data_storage
 
     async def get_by_id(self, genre_id: UUID) -> Genre | None:
         genre = await self._genre_from_cache(genre_id)
@@ -48,7 +48,7 @@ class GenreService:
     async def _get_genre_from_storage(self, genre_id: UUID) -> Genre | None:
         try:
             logger.info('Getting genre from db by id %s', genre_id)
-            genres = await self.storage.get(StorageEntity.GENRE, id=genre_id)
+            genres = await self.data_storage.get(DataStorageEntity.GENRE, id=genre_id)
         except Exception as e:
             logger.exception(e)
             raise
@@ -57,7 +57,7 @@ class GenreService:
     async def _get_all_genres_from_storage(self) -> List[Genre]:
         try:
             logger.info('Getting all genres from db')
-            genres = await self.storage.get(StorageEntity.GENRE)
+            genres = await self.data_storage.get(DataStorageEntity.GENRE)
         except Exception as e:
             logger.exception(e)
             raise
@@ -95,4 +95,4 @@ def get_genre_service(
         redis: Redis = Depends(get_redis),
         elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
-    return GenreService(RedisCacheStorage(redis), ElasticStorage(elastic))
+    return GenreService(RedisCacheStorage(redis), ElasticDataStorage(elastic))
