@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from uuid import UUID
-from typing import List
+from typing import List, Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 
 from services.film import FilmService, get_film_service, FilmServiceError
 from api.v1.schemas import Film, FilmDetailed
@@ -13,10 +13,13 @@ router = APIRouter()
 
 @router.get('/', response_model=List[Film], response_model_by_alias=False)
 async def films(
-    genre: UUID | None = None,
+    genre: Annotated[UUID | None, Query(description="genre id")] = None,
     pagination_params: PaginationParams = Depends(get_pagination_params),
     film_service: FilmService = Depends(get_film_service)
 ) -> List[Film]:
+    """
+    Get list with all films with such genre
+    """
     try:
         films = await film_service.get_films(genre, pagination_params.limit, pagination_params.offset)
     except FilmServiceError:
@@ -26,10 +29,13 @@ async def films(
 
 @router.get('/search', response_model=List[Film], response_model_by_alias=False)
 async def search(
-    query: str,
+    query: Annotated[str, Query(description="query containing a film's title")],
     pagination_params: PaginationParams = Depends(get_pagination_params),
     film_service: FilmService = Depends(get_film_service)
 ) -> List[Film]:
+    """
+    Search by title of the film
+    """
     try:
         films = await film_service.get_films_by_query(query, pagination_params.limit, pagination_params.offset)
     except FilmServiceError:
@@ -39,9 +45,12 @@ async def search(
 
 @router.get('/{film_id}', response_model=FilmDetailed, response_model_by_alias=False)
 async def film_details(
-    film_id: UUID,
+    film_id: Annotated[UUID, Path(description="film id")],
     film_service: FilmService = Depends(get_film_service)
 ) -> FilmDetailed:
+    """
+    Get film by id
+    """
     try:
         film = await film_service.get_film_by_id(film_id)
     except FilmServiceError:
