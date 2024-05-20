@@ -10,7 +10,7 @@ from redis import RedisError
 
 from elasticsearch import AsyncElasticsearch
 from db.elastic import get_elastic
-from db.storage import AbstractStorage, ElasticStorage, StorageError, StorageEntity
+from db.data_storage import AbstractStorage, ElasticStorage, StorageError, StorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.film import Film

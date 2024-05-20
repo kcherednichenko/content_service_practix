@@ -8,7 +8,7 @@ from fastapi import Depends
 from redis.asyncio import Redis
 
 from db.elastic import get_elastic
-from db.storage import ElasticStorage, AbstractStorage, StorageEntity
+from db.data_storage import ElasticStorage, AbstractStorage, StorageEntity
 from db.redis import get_redis
 from db.cache_storage import RedisCacheStorage, AbstractCacheStorage
 from models.person import Person
