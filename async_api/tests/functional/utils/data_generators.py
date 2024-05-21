@@ -10,7 +10,6 @@ from tests.functional.utils.models import (
     Person,
     PersonFilm,
     Genre,
-    Genres,
 )
 
 GENRES = ['Comedy', 'Horror', 'TV Show', 'News', 'Drama', 'Fantasy']

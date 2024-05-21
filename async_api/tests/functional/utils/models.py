@@ -38,7 +38,3 @@ class Film(BaseModel):
 class Genre(BaseModel):
     id: UUID
     name: str
-
-
-class Genres(BaseModel):
-    genres: List[Genre]
