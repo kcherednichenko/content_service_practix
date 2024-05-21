@@ -3,14 +3,25 @@ import uuid
 from typing import List
 from uuid import UUID
 
-from tests.functional.utils.models import Film, FilmGenre, FilmPerson, Person, PersonFilm
+from tests.functional.utils.models import (
+    Film,
+    FilmGenre,
+    FilmPerson,
+    Person,
+    PersonFilm,
+    Genre,
+)
+
+GENRES = ['Comedy', 'Horror', 'TV Show', 'News', 'Drama', 'Fantasy']
 
 
-def generate_films(keyword: str | None = None,
-                   actors: List[FilmPerson] | None = None,
-                   writers: List[FilmPerson] | None = None,
-                   directors: List[FilmPerson] | None = None,
-                   cnt: int = 10) -> List[Film]:
+def generate_films(
+    keyword: str | None = None,
+    actors: List[FilmPerson] | None = None,
+    writers: List[FilmPerson] | None = None,
+    directors: List[FilmPerson] | None = None,
+    cnt: int = 10,
+) -> List[Film]:
     film_genres = generate_film_genres(2)
     film_persons = generate_film_persons(2)
     titles = ['title', 'title ' + keyword] if keyword else ['title']
@@ -33,30 +44,58 @@ def generate_films(keyword: str | None = None,
 
 
 def generate_film_genres(cnt=10):
-    genres_names = ['Comedy', 'Horror', 'TV Show', 'News', 'Drama', 'Fantasy']
+
     genres = []
     for i in range(cnt):
-        genres.append(FilmGenre(id=uuid.uuid4(), name=random.choice(genres_names)))
+        genres.append(FilmGenre(id=uuid.uuid4(), name=random.choice(GENRES)))
 
     return genres
 
 
 def generate_film_persons(cnt=10):
-    film_persons_names = ['Sasha', 'Ira', 'Vasya', 'Natasha', 'Afanasiy', 'Zoya', 'Alex', 'Dasha', 'Denis', 'Olga']
+    film_persons_names = [
+        'Sasha',
+        'Ira',
+        'Vasya',
+        'Natasha',
+        'Afanasiy',
+        'Zoya',
+        'Alex',
+        'Dasha',
+        'Denis',
+        'Olga',
+    ]
     film_persons = []
     for i in range(cnt):
-        film_persons.append(FilmPerson(id=uuid.uuid4(), name=random.choice(film_persons_names)))
+        film_persons.append(
+            FilmPerson(id=uuid.uuid4(), name=random.choice(film_persons_names))
+        )
 
     return film_persons
 
 
-def generate_person(id: UUID | None = None,
-                    full_name: str = 'full name',
-                    films: List[Film] | None = None) -> Person:
+def generate_genre(id: UUID | None = None) -> Genre:
+    return Genre(id=id or uuid.uuid4(), name=random.choice(GENRES))
+
+
+def generate_genres(cnt: int = 1) -> List[Genre]:
+    genres = []
+    for name in random.sample(GENRES, cnt if cnt <= len(GENRES) else len(GENRES)):
+        genres.append(Genre(id=uuid.uuid4(), name=name))
+    return genres
+
+
+def generate_person(
+    id: UUID | None = None,
+    full_name: str = 'full name',
+    films: List[Film] | None = None,
+) -> Person:
     person_id = id or uuid.uuid4()
-    person_films = (_build_person_films_by_films(films, person_id)
-                    if films is not None
-                    else [_generate_person_film() for _ in range(random.randint(1, 3))])
+    person_films = (
+        _build_person_films_by_films(films, person_id)
+        if films is not None
+        else [_generate_person_film() for _ in range(random.randint(1, 3))]
+    )
     return Person(id=person_id, full_name=full_name, films=person_films)
 
 
@@ -64,15 +103,19 @@ def generate_persons(full_name: str = 'full name', cnt: int = 1) -> List[Person]
     return [generate_person(full_name=full_name) for _ in range(cnt)]
 
 
-def _generate_person_film(id: UUID | None = None, roles: List[str] | None = None) -> PersonFilm:
+def _generate_person_film(
+    id: UUID | None = None, roles: List[str] | None = None
+) -> PersonFilm:
     film_roles = ['writer', 'director', 'actor']
     return PersonFilm(
         id=id or uuid.uuid4(),
-        roles=roles or random.sample(film_roles, random.randint(1, len(film_roles)))
+        roles=roles or random.sample(film_roles, random.randint(1, len(film_roles))),
     )
 
 
-def _build_person_films_by_films(films: List[Film], person_id: UUID) -> List[PersonFilm]:
+def _build_person_films_by_films(
+    films: List[Film], person_id: UUID
+) -> List[PersonFilm]:
     person_films = []
     for film in films:
         film_roles = []
