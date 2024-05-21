@@ -13,12 +13,12 @@ router = APIRouter()
 
 @router.get('/', response_model=List[Film], response_model_by_alias=False)
 async def films(
-    genre: Annotated[UUID | None, Query(description="genre id")] = None,
+    genre: Annotated[UUID | None, Query(description='genre id')] = None,
     pagination_params: PaginationParams = Depends(get_pagination_params),
     film_service: FilmService = Depends(get_film_service)
 ) -> List[Film]:
     """
-    Get list with all films with such genre
+    Get list with all films
     """
     try:
         films = await film_service.get_films(genre, pagination_params.limit, pagination_params.offset)
@@ -29,12 +29,12 @@ async def films(
 
 @router.get('/search', response_model=List[Film], response_model_by_alias=False)
 async def search(
-    query: Annotated[str, Query(description="query containing a film's title")],
+    query: Annotated[str, Query(description='query to search by film')],
     pagination_params: PaginationParams = Depends(get_pagination_params),
     film_service: FilmService = Depends(get_film_service)
 ) -> List[Film]:
     """
-    Search by title of the film
+    Search by film
     """
     try:
         films = await film_service.get_films_by_query(query, pagination_params.limit, pagination_params.offset)
@@ -45,7 +45,7 @@ async def search(
 
 @router.get('/{film_id}', response_model=FilmDetailed, response_model_by_alias=False)
 async def film_details(
-    film_id: Annotated[UUID, Path(description="film id")],
+    film_id: Annotated[UUID, Path(description='film id')],
     film_service: FilmService = Depends(get_film_service)
 ) -> FilmDetailed:
     """

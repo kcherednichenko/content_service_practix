@@ -28,7 +28,7 @@ async def person_search(
 
 @router.get('/{person_id}/film', response_model=List[Film], response_model_by_alias=False)
 async def person_films(
-    person_id: Annotated[UUID, Path(description="person id")],
+    person_id: Annotated[UUID, Path(description='person id')],
     person_service: PersonService = Depends(get_person_service)
 ) -> List[Film]:
     """
@@ -42,7 +42,7 @@ async def person_films(
 
 @router.get('/{person_id}', response_model=PersonWithFilms, response_model_by_alias=False)
 async def person_details(
-    person_id: Annotated[UUID, Path(description="person id")],
+    person_id: Annotated[UUID, Path(description='person id')],
     person_service: PersonService = Depends(get_person_service)
 ) -> PersonWithFilms:
     """

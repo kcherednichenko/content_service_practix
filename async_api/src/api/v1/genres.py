@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.get('/{genre_id}', response_model=Genre, response_model_by_alias=False)
 async def genre_details(
-    genre_id: Annotated[UUID, Path(description="genre id")],
+    genre_id: Annotated[UUID, Path(description='genre id')],
     genre_service: GenreService = Depends(get_genre_service)
 ) -> Genre:
     """
