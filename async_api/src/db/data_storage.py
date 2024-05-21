@@ -5,6 +5,8 @@ from enum import Enum
 
 from elasticsearch import AsyncElasticsearch, ConnectionError
 
+from backoff import backoff
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,11 +107,15 @@ class ElasticDataStorage(AbstractDataStorage):
         logger.info('Requesting %s with query body: %s', entity, query_body)
         index = self._get_index_by_entity(entity)
         try:
-            response = await self._elastic.search(index=index, body=query_body)
+            response = await self._make_search_request(index, query_body)
         except ConnectionError as e:
             logger.error('Failed to request %s with query body: %s', entity, query_body)
             raise DataStorageError(e)
         return [f['_source'] for f in ((response.get('hits') or {}).get('hits') or [])]
+
+    @backoff(exceptions=(ConnectionError,))
+    async def _make_search_request(self, index: str, query_body: Dict[str, Any]) -> Dict[str, Any]:
+        return await self._elastic.search(index=index, body=query_body)
 
     def _get_index_by_entity(self, entity: DataStorageEntity) -> str:
         return self._STORAGE_ENTITY_INDEX_MAP[entity]
