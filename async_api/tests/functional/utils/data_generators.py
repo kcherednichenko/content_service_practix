@@ -34,12 +34,9 @@ def generate_films(
             description='description',
             imdb_rating=round(random.uniform(0.0, 10.0), 2),
             genres=[random.choice(film_genres) for _ in range(random.randint(0, 9))],
-            actors=actors
-            or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
-            writers=writers
-            or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
-            directors=directors
-            or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
+            actors=actors or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
+            writers=writers or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
+            directors=directors or [random.choice(film_persons) for _ in range(random.randint(0, 9))],
         )
         films.append(film)
 
@@ -75,6 +72,17 @@ def generate_film_persons(cnt=10):
         )
 
     return film_persons
+
+
+def generate_genre(id: UUID | None = None) -> Genre:
+    return Genre(id=id or uuid.uuid4(), name=random.choice(GENRES))
+
+
+def generate_genres(cnt: int = 1) -> List[Genre]:
+    genres = []
+    for name in random.sample(GENRES, cnt if cnt <= len(GENRES) else len(GENRES)):
+        genres.append(Genre(id=uuid.uuid4(), name=name))
+    return genres
 
 
 def generate_person(
@@ -120,14 +128,3 @@ def _build_person_films_by_films(
         if film_roles:
             person_films.append(PersonFilm(id=film.id, roles=film_roles))
     return person_films
-
-
-def generate_genres(
-    id: UUID | None = None, name: str | None = None, many: bool = False
-) -> Genre:
-    result = []
-    if not many:
-        return Genre(id=id, name=name)
-    for genre in GENRES:
-        result.append(Genre(id=uuid.uuid4(), name=genre))
-    return result

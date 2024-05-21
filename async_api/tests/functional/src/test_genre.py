@@ -3,10 +3,10 @@ from http import HTTPStatus
 
 import pytest
 
-from tests.functional.utils.models import Genre
-from tests.functional.utils.data_generators import generate_genres, GENRES
+from tests.functional.utils.data_generators import generate_genre, generate_genres
 
 GENRE_INDEX_NAME = 'genres'
+_GENRE_ID_KEY_PREFIX = 'genre_id_'
 
 
 @pytest.mark.asyncio
@@ -14,8 +14,7 @@ GENRE_INDEX_NAME = 'genres'
 async def test_genres_views_status_code(es_write_data, make_get_request):
     id = uuid.uuid4()
     not_found_id = uuid.uuid4()
-    genre_name = 'Comedy'
-    genre = generate_genres(id=id, name=genre_name)
+    genre = generate_genre(id=id)
     await es_write_data(
         [
             {
@@ -34,7 +33,7 @@ async def test_genres_views_status_code(es_write_data, make_get_request):
 @pytest.mark.asyncio
 @pytest.mark.usefixtures('genres_index')
 async def test_genres_list(es_write_data, make_get_request):
-    genres = generate_genres(many=True)
+    genres = generate_genres(cnt=5)
     await es_write_data(
         [
             {
@@ -45,19 +44,19 @@ async def test_genres_list(es_write_data, make_get_request):
             for genre in genres
         ]
     )
-    response = await make_get_request(f'api/v1/genres/')
+    response = await make_get_request('api/v1/genres/')
     assert response.status == HTTPStatus.OK
     body = await response.json()
-    assert len(body) == len(GENRES)
+    assert len(body) == len(genres)
 
 
+@pytest.mark.asyncio
 async def test_get_genre_in_redis(redis_write_data, make_get_request):
     id = uuid.uuid4()
-    name = 'Genre'
-    genre = generate_genres(id=id, name=name)
-    cache_key = f'{GENRE_INDEX_NAME}:{genre.id}'
+    genre = generate_genre(id=id)
+    cache_key = _GENRE_ID_KEY_PREFIX + str(genre.id)
     await redis_write_data(cache_key, genre.model_dump_json())
 
     response = await make_get_request(f'api/v1/genres/{genre.id}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
