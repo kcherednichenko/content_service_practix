@@ -13,7 +13,7 @@ from tests.functional.utils.models import (
     Genres,
 )
 
-GENRES = ["Comedy", "Horror", "TV Show", "News", "Drama", "Fantasy"]
+GENRES = ['Comedy', 'Horror', 'TV Show', 'News', 'Drama', 'Fantasy']
 
 
 def generate_films(
@@ -25,14 +25,14 @@ def generate_films(
 ) -> List[Film]:
     film_genres = generate_film_genres(2)
     film_persons = generate_film_persons(2)
-    titles = ["title", "title " + keyword] if keyword else ["title"]
+    titles = ['title', 'title ' + keyword] if keyword else ['title']
     films = []
     for i in range(cnt):
         film_id = uuid.uuid4()
         film = Film(
             id=film_id,
             title=random.choice(titles),
-            description="description",
+            description='description',
             imdb_rating=round(random.uniform(0.0, 10.0), 2),
             genres=[random.choice(film_genres) for _ in range(random.randint(0, 9))],
             actors=actors
@@ -58,16 +58,16 @@ def generate_film_genres(cnt=10):
 
 def generate_film_persons(cnt=10):
     film_persons_names = [
-        "Sasha",
-        "Ira",
-        "Vasya",
-        "Natasha",
-        "Afanasiy",
-        "Zoya",
-        "Alex",
-        "Dasha",
-        "Denis",
-        "Olga",
+        'Sasha',
+        'Ira',
+        'Vasya',
+        'Natasha',
+        'Afanasiy',
+        'Zoya',
+        'Alex',
+        'Dasha',
+        'Denis',
+        'Olga',
     ]
     film_persons = []
     for i in range(cnt):
@@ -80,7 +80,7 @@ def generate_film_persons(cnt=10):
 
 def generate_person(
     id: UUID | None = None,
-    full_name: str = "full name",
+    full_name: str = 'full name',
     films: List[Film] | None = None,
 ) -> Person:
     person_id = id or uuid.uuid4()
@@ -92,14 +92,14 @@ def generate_person(
     return Person(id=person_id, full_name=full_name, films=person_films)
 
 
-def generate_persons(full_name: str = "full name", cnt: int = 1) -> List[Person]:
+def generate_persons(full_name: str = 'full name', cnt: int = 1) -> List[Person]:
     return [generate_person(full_name=full_name) for _ in range(cnt)]
 
 
 def _generate_person_film(
     id: UUID | None = None, roles: List[str] | None = None
 ) -> PersonFilm:
-    film_roles = ["writer", "director", "actor"]
+    film_roles = ['writer', 'director', 'actor']
     return PersonFilm(
         id=id or uuid.uuid4(),
         roles=roles or random.sample(film_roles, random.randint(1, len(film_roles))),
@@ -113,11 +113,11 @@ def _build_person_films_by_films(
     for film in films:
         film_roles = []
         if person_id in [p.id for p in film.actors]:
-            film_roles.append("actor")
+            film_roles.append('actor')
         if person_id in [p.id for p in film.writers]:
-            film_roles.append("writer")
+            film_roles.append('writer')
         if person_id in [p.id for p in film.directors]:
-            film_roles.append("director")
+            film_roles.append('director')
         if film_roles:
             person_films.append(PersonFilm(id=film.id, roles=film_roles))
     return person_films
