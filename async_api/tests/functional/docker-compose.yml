@@ -5,8 +5,6 @@ services:
     image: elasticsearch:8.6.2
     volumes:
       - elasticsearch:/usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
     expose:
       - "9200"
     environment:
@@ -26,8 +24,6 @@ services:
     image: redis:7.2.4
     volumes:
       - redis:/data
-    ports:
-      - "6379:6379"
     expose:
       - "6379"
     healthcheck:
@@ -38,8 +34,6 @@ services:
 
   async_api:
     build: ../../.
-    ports:
-      - "8000:8000"
     expose:
       - "8000"
     env_file:
@@ -49,6 +43,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  tests:
+    build: .
+    env_file:
+      - .env
+    depends_on:
+      - async_api
 
 volumes:
   elasticsearch:
