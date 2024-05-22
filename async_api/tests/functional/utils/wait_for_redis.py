@@ -3,12 +3,11 @@ import time
 
 from redis import Redis
 
-from dotenv import load_dotenv
+from tests.functional.settings import test_settings
 
 
 if __name__ == '__main__':
-    load_dotenv()
-    redis_client = Redis(host=os.environ.get('REDIS_HOST'), port=os.environ.get('REDIS_PORT'))
+    redis_client = Redis(host=test_settings.redis_host, port=test_settings.redis_port)
     while True:
         if redis_client.ping():
             break
