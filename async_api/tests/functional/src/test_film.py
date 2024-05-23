@@ -1,4 +1,5 @@
 import uuid
+from http import HTTPStatus
 
 import pytest
 
@@ -17,7 +18,7 @@ async def test_get_existing_film_by_id_from_db(es_write_data, make_get_request):
 
     response = await make_get_request(f'api/v1/films/{film.id}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert film == Film(**body)
 
@@ -31,7 +32,7 @@ async def test_get_existing_film_by_id_from_cache(redis_write_data, make_get_req
 
     response = await make_get_request(f'api/v1/films/{film.id}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert film == Film(**body)
 
@@ -41,7 +42,7 @@ async def test_get_existing_film_by_id_from_cache(redis_write_data, make_get_req
 async def test_get_not_existing_film_by_id(make_get_request):
     response = await make_get_request(f'api/v1/films/{uuid.uuid4()}')
 
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -58,7 +59,7 @@ async def test_search_existing_film(es_write_data, make_get_request):
 
     response = await make_get_request(f'api/v1/films/search?query={query}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert cnt_films_with_keyword == len(body)
 
@@ -72,6 +73,6 @@ async def test_search_not_existing_film(es_write_data, make_get_request):
     query = 'no_such_film'
     response = await make_get_request(f'api/v1/films/search?query={query}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert len(body) == 0

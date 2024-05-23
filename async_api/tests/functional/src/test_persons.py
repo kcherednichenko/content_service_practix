@@ -1,4 +1,5 @@
 import uuid
+from http import HTTPStatus
 from uuid import UUID
 from typing import Any, Dict, List
 
@@ -22,7 +23,7 @@ async def test_get_existing_person_by_id(es_write_data, make_get_request) -> Non
 
     response = await make_get_request(f'api/v1/persons/{person.id}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert body == _expected_person(person)
 
@@ -35,7 +36,7 @@ async def test_get_person_by_id_from_cache(redis_write_data, make_get_request) -
 
     response = await make_get_request(f'api/v1/persons/{person.id}')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert body == _expected_person(person)
 
@@ -44,7 +45,7 @@ async def test_get_person_by_id_from_cache(redis_write_data, make_get_request) -
 @pytest.mark.usefixtures('persons_index')
 async def test_get_not_existing_person_by_id(make_get_request) -> None:
     response = await make_get_request(f'api/v1/persons/{uuid.uuid4()}')
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -57,7 +58,7 @@ async def test_search_returns_correct_persons(es_write_data, make_get_request) -
 
     response = await make_get_request('api/v1/persons/search', {'query': full_name})
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert len(body) == len(searched_persons)
     assert body == _expected_persons(searched_persons)
@@ -71,7 +72,7 @@ async def test_search_no_persons(es_write_data, make_get_request) -> None:
 
     response = await make_get_request('api/v1/persons/search', {'query': 'Someone'})
 
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -82,7 +83,7 @@ async def test_no_films_for_person(es_write_data, make_get_request) -> None:
 
     response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
-    assert response.status == 404
+    assert response.status == HTTPStatus.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -100,7 +101,7 @@ async def test_get_films_for_person(es_write_data, make_get_request) -> None:
 
     response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert len(body) == len(films)
     assert body == _expected_films(films)
@@ -123,7 +124,7 @@ async def test_get_films_for_person_from_cache(redis_write_data, make_get_reques
 
     response = await make_get_request(f'api/v1/persons/{person.id}/film')
 
-    assert response.status == 200
+    assert response.status == HTTPStatus.OK
     body = await response.json()
     assert len(body) == len(films)
     assert body == _expected_films(films)
