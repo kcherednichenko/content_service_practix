@@ -9,3 +9,5 @@ uvloop==0.19.0 ; sys_platform != "win32" and implementation_name == "cpython"
 python-dotenv==1.0.1
 flake8==7.0.0
 gunicorn==22.0.0
+PyJWT==2.8.0
+cryptography==42.0.8
