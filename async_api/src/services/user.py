@@ -4,7 +4,7 @@ from functools import lru_cache
 import logging
 
 from fastapi import Depends
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientError
 from services.token import TokenService, get_token_service, TokenServiceError
 
 from http_client import get_session
@@ -28,16 +28,22 @@ class UserService:
         return True
 
     async def _get_actual_user_roles(self, user_id: UUID) -> List[str]:
+        logger.info('Getting actual user %s roles', user_id)
         try:
             service_token = await self._token_service.get_service_token()
         except TokenServiceError:
             return []
 
-        async with self._http_session.get(
-            f'http://{settings.auth_service_host}:{settings.auth_service_port}/api/v1/users/{user_id}/roles',
-            headers={'Authorization': f'Bearer {service_token}'}
-        ) as resp:
-            return [r['name'] for r in await resp.json()]
+        try:
+            async with self._http_session.get(
+                f'http://{settings.auth_service_host}:{settings.auth_service_port}/api/v1/users/{user_id}/roles',
+                headers={'Authorization': f'Bearer {service_token}'},
+                raise_for_status=True
+            ) as resp:
+                return [r['name'] for r in await resp.json()]
+        except ClientError as e:
+            logger.error('Failed to get actual user roles: %s', e)
+            return []
 
 
 @lru_cache()
