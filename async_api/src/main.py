@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
+import aiohttp
 from elasticsearch import AsyncElasticsearch
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
@@ -11,15 +12,18 @@ from api.v1 import films, genres, persons
 from core.config import settings
 from core.logger import LOGGING
 from db import elastic, redis
+import http_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis.redis = Redis(host=settings.redis_host, port=settings.redis_port)
     elastic.es = AsyncElasticsearch(hosts=[f'http://{settings.elastic_host}:{settings.elastic_port}'])
+    http_client.session = aiohttp.ClientSession()
     yield
     await redis.redis.close()
     await elastic.es.close()
+    await http_client.session.close()
 
 
 app = FastAPI(
