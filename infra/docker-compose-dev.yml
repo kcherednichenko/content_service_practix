@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  es:
+    image: elasticsearch:8.6.2
+    volumes:
+      - es_practix_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    expose:
+      - "9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    healthcheck:
+      test:     
+        [
+          "CMD-SHELL",
+          "curl -s http://localhost:9200/_cluster/health?pretty | grep status | grep -q '\\(green\\|yellow\\)'"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2.4
+    volumes:
+      - redis_practix_data:/data
+    ports:
+      - "6379:6379"
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  es_practix_data:
+  redis_practix_data:

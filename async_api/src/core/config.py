@@ -17,5 +17,12 @@ class Settings(BaseSettings):
     elastic_host: str = '127.0.0.1'
     elastic_port: int = 9200
 
+    service_login: str
+    service_password: str
+
+    auth_service_host: str = '127.0.0.1'
+    auth_service_port: int = 80
+    jwt_public_key: bytes
+
 
 settings = Settings()
