@@ -30,14 +30,14 @@ class UserService:
     async def _get_actual_user_roles(self, user_id: UUID) -> List[str]:
         logger.info('Getting actual user %s roles', user_id)
         try:
-            service_token = await self._token_service.get_service_token()
+            service_access_token = await self._token_service.get_service_access_token()
         except TokenServiceError:
             return []
 
         try:
             async with self._http_session.get(
                 f'http://{settings.auth_service_host}:{settings.auth_service_port}/api/v1/users/{user_id}/roles',
-                headers={'Authorization': f'Bearer {service_token}'},
+                headers={'Authorization': f'Bearer {service_access_token}'},
                 raise_for_status=True
             ) as resp:
                 return [r['name'] for r in await resp.json()]

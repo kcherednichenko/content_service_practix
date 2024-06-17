@@ -47,7 +47,7 @@ class TokenService:
             return None
         return User(id=payload.user_id, roles=payload.roles)
 
-    async def get_service_token(self) -> str:
+    async def get_service_access_token(self) -> str:
         logger.info('Getting service token')
         access_token, refresh_token = await self._get_service_tokens()
         if access_token and self._is_access_token_valid(access_token):
