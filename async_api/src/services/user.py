@@ -9,7 +9,7 @@ from services.token import TokenService, get_token_service, TokenServiceError
 
 from http_client import get_session
 from core.config import settings
-from models.user import User
+from models.user import User, Role
 
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class UserService:
     async def is_subscriber(self, user: User) -> bool:
         logger.info('Checking if user %s is subscriber', user.id)
         user_roles = await self._get_actual_user_roles(user.id) or user.roles
-        if len(set(user_roles) & {'subscriber', 'admin', 'superuser'}) == 0:
+        if len(set(user_roles) & {Role.SUBSCRIBER, Role.ADMIN, Role.SUPERUSER}) == 0:
             return False
         return True
 
