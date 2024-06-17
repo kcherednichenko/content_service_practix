@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 
 class UserService:
+    _SUBSCRIBER_ROLES = {Role.SUBSCRIBER, Role.ADMIN, Role.SUPERUSER}
+
     def __init__(self, http_session: ClientSession, token_service: TokenService):
         self._http_session = http_session
         self._token_service = token_service
@@ -23,7 +25,7 @@ class UserService:
     async def is_subscriber(self, user: User) -> bool:
         logger.info('Checking if user %s is subscriber', user.id)
         user_roles = await self._get_actual_user_roles(user.id) or user.roles
-        if len(set(user_roles) & {Role.SUBSCRIBER, Role.ADMIN, Role.SUPERUSER}) == 0:
+        if len(set(user_roles) & self._SUBSCRIBER_ROLES) == 0:
             return False
         return True
 
