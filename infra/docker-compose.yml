@@ -1,10 +1,10 @@
 version: '3'
 
 services:
-  es:
+  content_es:
     image: elasticsearch:8.6.2
     volumes:
-      - es_practix_data:/usr/share/elasticsearch/data
+      - content_es_data:/usr/share/elasticsearch/data
     expose:
       - "9200"
     environment:
@@ -20,10 +20,10 @@ services:
       timeout: 10s
       retries: 5
 
-  redis:
+  content_redis:
     image: redis:7.2.4
     volumes:
-      - redis_practix_data:/data
+      - content_redis_data:/data
     expose:
       - "6379"
     healthcheck:
@@ -39,24 +39,24 @@ services:
     volumes:
       - ./es_data:/data
     depends_on:
-      es:
+      content_es:
         condition: service_healthy
     env_file:
       - ../async_api/.env
 
-  async_api:
+  content_service:
     build: ../async_api
     expose:
       - "8000"
     env_file:
       - ../async_api/.env
     depends_on:
-      es:
+      content_es:
         condition: service_healthy
-      redis:
+      content_redis:
         condition: service_healthy
 
-  nginx:
+  content_nginx:
     image: nginx:1.25.3
     volumes:
       - ../nginx/nginx.conf:/etc/nginx/nginx.conf
@@ -64,8 +64,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - async_api
+      - content_service
 
 volumes:
-  es_practix_data:
-  redis_practix_data:
+  content_es_data:
+  content_redis_data:
