@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserService:
-    _SUBSCRIBER_ROLES = {Role.SUBSCRIBER, Role.ADMIN, Role.SUPERUSER}
+    _SUBSCRIBER_ROLES = {Role.SUBSCRIBER, Role.ADMIN, Role.SUPERUSER, Role.SERVICE}
 
     def __init__(self, http_session: ClientSession, token_service: TokenService):
         self._http_session = http_session

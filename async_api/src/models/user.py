@@ -9,6 +9,7 @@ class Role(str, Enum):
     SUBSCRIBER = 'subscriber'
     ADMIN = 'admin'
     SUPERUSER = 'superuser'
+    SERVICE = 'service'
 
 
 class User(BaseModel):
